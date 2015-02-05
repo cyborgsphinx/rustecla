@@ -24,7 +24,7 @@ extern {
     fn gl_get_line(gl: *mut GetLine,
                    prompt: *const c_char,
                    start_line: *const c_char,
-                   start_pos: c_int) -> CString;
+                   start_pos: c_int) -> *const c_char;
     fn gl_query_char(gl: *mut GetLine, prompt: *const c_char, defchar: c_char) -> c_int;
     fn gl_read_char(gl: *mut GetLine) -> c_int;
     fn gl_configure_getline(gl: *mut GetLine, app_string: *const c_char,
@@ -55,12 +55,12 @@ pub fn new_gl(linelen: usize, histlen: usize) -> *mut GetLine {
 
 pub fn get_line(gl: *mut GetLine, prompt: &str) -> String {
     let c_prompt = CString::from_slice(prompt.as_bytes());
-    let mut out: CString;
+    let mut out: *const c_char;
     let start = 0 as i8;
     let mut res: &str;
     unsafe {
-        out = gl_get_line(gl, c_prompt.as_ptr(), & start, -1);
-        res = from_utf8_unchecked(out.as_bytes());
+        out = gl_get_line(gl, c_prompt.as_ptr(), &start, -1);
+        res = from_utf8_unchecked(std::ffi::c_str_to_bytes(&out));
     }
     as_string(res).clone()
 }
