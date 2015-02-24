@@ -11,6 +11,8 @@ pub fn main() {
         println!("{}",input);
         if input == "exit\n".to_string() {
             break;
+        } else if input == "clear\n".to_string() {
+            rustecla::clear(gl);
         }
     }
 //    rustecla::query_char(gl, "Really quit? [Y/n] ", 'y');

@@ -60,6 +60,7 @@ extern {
                        filename: *const c_char,
                        comment: *const c_char);
     fn gl_ignore_signal(gl: *mut GetLine, signo: c_int);
+    fn gl_erase_terminal(gl: *mut GetLine) -> c_int;
 }
 
 pub fn new_gl(linelen: usize, histlen: usize) -> *mut GetLine {
@@ -124,6 +125,12 @@ pub fn load_history(gl: *mut GetLine, file: &str, comment: &str) {
 pub fn ignore(gl: *mut GetLine, sig: isize) {
     unsafe {
         gl_ignore_signal(gl, sig as c_int)
+    }
+}
+
+pub fn clear(gl: *mut GetLine) -> i32 {
+    unsafe {
+        gl_erase_terminal(gl)
     }
 }
 
