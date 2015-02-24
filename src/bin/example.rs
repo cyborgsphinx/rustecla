@@ -13,4 +13,6 @@ pub fn main() {
             break;
         }
     }
+//    rustecla::query_char(gl, "Really quit? [Y/n] ", 'y');
+    rustecla::del_gl(gl);
 }

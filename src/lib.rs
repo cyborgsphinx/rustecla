@@ -25,12 +25,12 @@ pub struct WordCompletion;
 extern {
     // fn libtecla_version(major: *mut c_int, minor: *mut c_int, micro: *mut c_int);
     fn new_GetLine(linelen: size_t, histlen: size_t) -> *mut GetLine;
-    // fn del_GetLine(gl: *mut GetLine) -> *mut GetLine;
+    fn del_GetLine(gl: *mut GetLine) -> *mut GetLine;
     fn gl_get_line(gl: *mut GetLine,
                    prompt: *const c_char,
                    start_line: *const c_char,
                    start_pos: c_int) -> *const c_char;
-    // fn gl_query_char(gl: *mut GetLine, prompt: *const c_char, defchar: c_char) -> c_int;
+    fn gl_query_char(gl: *mut GetLine, prompt: *const c_char, defchar: c_char) -> c_int;
     // fn gl_read_char(gl: *mut GetLine) -> c_int;
     // fn gl_configure_getline(gl: *mut GetLine, app_string: *const c_char,
     //                        app_file: *const c_char, user_file: *const c_char) -> c_int;
@@ -46,6 +46,20 @@ extern {
     // fn ef_last_error(ef: *mut ExpandFile) -> *const c_char;
     // fn new_WordCompletion() -> *mut WordCompletion;
     // fn del_WordCompletion(cpl: *mut WordCompletion) -> WordCompletion;
+    /*fn gl_completion_action(gl: *mut GetLine,
+                            data: *const void,
+                            match_fn: CplMatchFn,
+                            list_only: c_int,
+                            name: *const c_char,
+                            keyseq: *const c_char) -> c_int;*/
+    fn gl_save_history(gl: *mut GetLine,
+                       filename: *const c_char,
+                       comment: *const c_char,
+                       max_lines: c_int);
+    fn gl_load_history(gl: *mut GetLine,
+                       filename: *const c_char,
+                       comment: *const c_char);
+    fn gl_ignore_signal(gl: *mut GetLine, signo: c_int);
 }
 
 pub fn new_gl(linelen: usize, histlen: usize) -> *mut GetLine {
@@ -56,6 +70,12 @@ pub fn new_gl(linelen: usize, histlen: usize) -> *mut GetLine {
         res = new_GetLine(line, hist);
     }
     res
+}
+
+pub fn del_gl(gl: *mut GetLine) -> *mut GetLine {
+    unsafe {
+        del_GetLine(gl)
+    }
 }
 
 pub fn get_line(gl: *mut GetLine, prompt: &str) -> String {
@@ -69,6 +89,44 @@ pub fn get_line(gl: *mut GetLine, prompt: &str) -> String {
     as_string(res).clone()
 }
 
-#[test]
-fn it_works() {
+///Returns the character read, or 0 if unreadable
+pub fn query_char(gl: *mut GetLine, prompt: &str, defchar: char) -> char {
+    let c_prompt = CString::new(prompt.as_bytes()).unwrap();
+    let mut res: u8;
+    unsafe {
+        let out = gl_query_char(gl, c_prompt.as_ptr(), defchar as c_char);
+        if out > 0 {
+            res = out as u8;
+        } else {
+            res = 0;
+        }
+    }
+    res as char
 }
+
+pub fn save_history(gl: *mut GetLine, file: &str, comment: &str, max: usize) {
+    let c_file = CString::new(file.as_bytes()).unwrap();
+    let c_comment = CString::new(comment.as_bytes()).unwrap();
+    let c_max = max as c_int;
+    unsafe {
+        gl_save_history(gl, c_file.as_ptr(), c_comment.as_ptr(), c_max)
+    }
+}
+
+pub fn load_history(gl: *mut GetLine, file: &str, comment: &str) {
+    let c_file = CString::new(file.as_bytes()).unwrap();
+    let c_comment = CString::new(comment.as_bytes()).unwrap();
+    unsafe {
+        gl_load_history(gl, c_file.as_ptr(), c_comment.as_ptr())
+    }
+}
+
+pub fn ignore(gl: *mut GetLine, sig: isize) {
+    unsafe {
+        gl_ignore_signal(gl, sig as c_int)
+    }
+}
+
+/*#[test]
+fn it_works() {
+}*/
