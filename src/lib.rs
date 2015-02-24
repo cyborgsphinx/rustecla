@@ -63,12 +63,12 @@ extern {
     fn gl_erase_terminal(gl: *mut GetLine) -> c_int;
 }
 
-pub fn new_gl(linelen: usize, histlen: usize) -> *mut GetLine {
-    let line = linelen as size_t;
-    let hist = histlen as size_t;
+pub fn new_gl(linelen: u64, histlen: u64) -> *mut GetLine {
+    //let line = linelen as size_t;
+    //let hist = histlen as size_t;
     let mut res: *mut GetLine;
     unsafe {
-        res = new_GetLine(line, hist);
+        res = new_GetLine(linelen, histlen);
     }
     res
 }
