@@ -1,29 +1,33 @@
 #![feature(libc)]
 #![feature(collections)]
 #![feature(std_misc)]
+//! Simple [libtecla](http://www.astro.caltech.edu/~mcs/tecla/libtecla.html) wrapper.
+
 extern crate libc;
 use libc::{c_char, c_int, size_t};
-//use libc::types::common::c95::FILE;
 
 use std::ffi::{CString, CStr};
 use std::string::as_string;
 use std::str::from_utf8_unchecked;
 use std::ptr;
 
+pub type CplMatchFn = fn(*mut WordCompletion, *mut c_char, *const c_char, c_int) -> c_int;
+
 #[repr(C)]
 pub struct GetLine;
-/*pub struct ExpandFile;
-pub struct FileExpansion {
+#[repr(C)]
+pub struct ExpandFile;
+/*pub struct FileExpansion {
     exists: c_int,
     nfile: c_int,
     files: *mut char,
-}
+}*/
+#[repr(C)]
 pub struct WordCompletion;
-*/
+
 // will add functions as needed
 #[link(name = "tecla")]
 extern {
-    // fn libtecla_version(major: *mut c_int, minor: *mut c_int, micro: *mut c_int);
     fn new_GetLine(linelen: size_t, histlen: size_t) -> *mut GetLine;
     fn del_GetLine(gl: *mut GetLine) -> *mut GetLine;
     fn gl_get_line(gl: *mut GetLine,
@@ -31,12 +35,8 @@ extern {
                    start_line: *const c_char,
                    start_pos: c_int) -> *const c_char;
     fn gl_query_char(gl: *mut GetLine, prompt: *const c_char, defchar: c_char) -> c_int;
-    // fn gl_read_char(gl: *mut GetLine) -> c_int;
-    // fn gl_configure_getline(gl: *mut GetLine, app_string: *const c_char,
-    //                        app_file: *const c_char, user_file: *const c_char) -> c_int;
-    // fn gl_bind_keyseq() -> c_int;
-    // fn new_ExpandFile() -> *mut ExpandFile;
-    // fn del_ExpandFile(ef: *mut ExpandFile) -> *mut ExpandFile;
+    fn new_ExpandFile() -> *mut ExpandFile;
+    fn del_ExpandFile(ef: *mut ExpandFile) -> *mut ExpandFile;
     // fn ef_expand_file(ef: *mut ExpandFile,
     //                  path: *const c_char,
     //                  pathlen: c_int) -> *mut FileExpansion;
@@ -44,14 +44,17 @@ extern {
     //                      fp: *mut FILE,
     //                      term_width: c_int) -> c_int;
     // fn ef_last_error(ef: *mut ExpandFile) -> *const c_char;
-    // fn new_WordCompletion() -> *mut WordCompletion;
-    // fn del_WordCompletion(cpl: *mut WordCompletion) -> WordCompletion;
+    fn new_WordCompletion() -> *mut WordCompletion;
+    fn del_WordCompletion(cpl: *mut WordCompletion) -> WordCompletion;
     /*fn gl_completion_action(gl: *mut GetLine,
                             data: *const void,
                             match_fn: CplMatchFn,
                             list_only: c_int,
                             name: *const c_char,
                             keyseq: *const c_char) -> c_int;*/
+    fn gl_customize_completion(gl: *mut GetLine,
+                               data: *const c_char,
+                               match_fn: &CplMatchFn) -> c_int;
     fn gl_save_history(gl: *mut GetLine,
                        filename: *const c_char,
                        comment: *const c_char,
@@ -61,11 +64,14 @@ extern {
                        comment: *const c_char);
     fn gl_ignore_signal(gl: *mut GetLine, signo: c_int);
     fn gl_erase_terminal(gl: *mut GetLine) -> c_int;
+    fn cpl_file_completions(cpl: *mut WordCompletion,
+                            data: *const c_char,
+                            line: *const c_char,
+                            word_end: c_int) -> c_int;
 }
 
+///Creates new GetLine object
 pub fn new_gl(linelen: u64, histlen: u64) -> *mut GetLine {
-    //let line = linelen as size_t;
-    //let hist = histlen as size_t;
     let mut res: *mut GetLine;
     unsafe {
         res = new_GetLine(linelen, histlen);
@@ -73,12 +79,42 @@ pub fn new_gl(linelen: u64, histlen: u64) -> *mut GetLine {
     res
 }
 
+///Deletes GetLine object
 pub fn del_gl(gl: *mut GetLine) -> *mut GetLine {
     unsafe {
         del_GetLine(gl)
     }
 }
 
+///Creates new WordCompletion object
+pub fn new_wc() -> *mut WordCompletion {
+    unsafe {
+        new_WordCompletion()
+    }
+}
+
+///Deletes WordCompletion object
+pub fn del_wc(cpl: *mut WordCompletion) -> WordCompletion {
+    unsafe {
+        del_WordCompletion(cpl)
+    }
+}
+
+///Creates new ExpandFile object
+pub fn new_ef() -> *mut ExpandFile {
+    unsafe {
+        new_ExpandFile()
+    }
+}
+
+///Deletes ExpandFile object
+pub fn del_ef(ef: *mut ExpandFile) -> *mut ExpandFile {
+    unsafe {
+        del_ExpandFile(ef)
+    }
+}
+
+///Gets line from user using GetLine object
 pub fn get_line(gl: *mut GetLine, prompt: &str) -> String {
     let c_prompt = CString::new(prompt.as_bytes()).unwrap();
     let start: *const i8 = ptr::null();
@@ -105,6 +141,7 @@ pub fn query_char(gl: *mut GetLine, prompt: &str, defchar: char) -> char {
     res as char
 }
 
+///Saves history to a file
 pub fn save_history(gl: *mut GetLine, file: &str, comment: &str, max: usize) {
     let c_file = CString::new(file.as_bytes()).unwrap();
     let c_comment = CString::new(comment.as_bytes()).unwrap();
@@ -114,6 +151,7 @@ pub fn save_history(gl: *mut GetLine, file: &str, comment: &str, max: usize) {
     }
 }
 
+///Loads history from a file
 pub fn load_history(gl: *mut GetLine, file: &str, comment: &str) {
     let c_file = CString::new(file.as_bytes()).unwrap();
     let c_comment = CString::new(comment.as_bytes()).unwrap();
@@ -122,18 +160,36 @@ pub fn load_history(gl: *mut GetLine, file: &str, comment: &str) {
     }
 }
 
+///Ignore specified signal
 pub fn ignore(gl: *mut GetLine, sig: isize) {
     unsafe {
         gl_ignore_signal(gl, sig as c_int)
     }
 }
 
+///Clear screen
 pub fn clear(gl: *mut GetLine) -> i32 {
     unsafe {
         gl_erase_terminal(gl)
     }
 }
 
+///Sets the completion function
+pub fn custom_complete(gl: *mut GetLine, data: &mut str, func: CplMatchFn) -> i32 {
+    let c_data = CString::new(data.as_bytes()).unwrap();
+    unsafe {
+        gl_customize_completion(gl, c_data.as_ptr(), &func)
+    }
+}
+
+///Calls built-in libtecla file completion function
+pub fn builtin_complete(cpl: *mut WordCompletion, data: &mut str, line: &str, word_end: i32) -> i32 {
+    let c_line = CString::new(line.as_bytes()).unwrap();
+    let c_data = CString::new(data.as_bytes()).unwrap();
+    unsafe {
+        cpl_file_completions(cpl, c_data.as_ptr(), c_line.as_ptr(), word_end)
+    }
+}
 /*#[test]
 fn it_works() {
 }*/
