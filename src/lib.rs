@@ -190,11 +190,12 @@ pub fn custom_complete(gl: *mut GetLine, data: &mut str, func: CplMatchFn) -> i3
 }
 
 ///Calls built-in libtecla file completion function
-pub fn builtin_complete(cpl: *mut WordCompletion, data: &mut str, line: &str, word_end: i32) -> i32 {
-    let c_line = CString::new(line.as_bytes()).unwrap();
-    let c_data = CString::new(data.as_bytes()).unwrap();
+pub fn builtin_complete(cpl: *mut WordCompletion,
+                        data: *mut c_char,
+                        line: *const c_char,
+                        word_end: i32) -> i32 {
     unsafe {
-        cpl_file_completions(cpl, c_data.as_ptr(), c_line.as_ptr(), word_end)
+        cpl_file_completions(cpl, data, line, word_end)
     }
 }
 
