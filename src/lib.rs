@@ -182,10 +182,10 @@ pub fn clear(gl: *mut GetLine) -> i32 {
 }
 
 ///Sets the completion function
-pub fn custom_complete(gl: *mut GetLine, data: &str, func: CplMatchFn) -> i32 {
+pub fn custom_complete(gl: *mut GetLine, data: &str, func: &CplMatchFn) -> i32 {
     let c_data = CString::new(data.as_bytes()).unwrap();
     unsafe {
-        gl_customize_completion(gl, c_data.as_ptr(), &func)
+        gl_customize_completion(gl, c_data.as_ptr(), func)
     }
 }
 
