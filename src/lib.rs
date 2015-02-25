@@ -68,6 +68,13 @@ extern {
                             data: *const c_char,
                             line: *const c_char,
                             word_end: c_int) -> c_int;
+    fn cpl_add_completion(cpl: *mut WordCompletion,
+                          line: *const c_char,
+                          word_start: c_int,
+                          word_end: c_int,
+                          suffix: *const c_char,
+                          type_suffix: *const c_char,
+                          cont_suffix: *const c_char) -> c_int;
 }
 
 ///Creates new GetLine object
@@ -190,6 +197,16 @@ pub fn builtin_complete(cpl: *mut WordCompletion, data: &mut str, line: &str, wo
         cpl_file_completions(cpl, c_data.as_ptr(), c_line.as_ptr(), word_end)
     }
 }
-/*#[test]
-fn it_works() {
-}*/
+
+///Calls cpl_add_completion
+pub fn add_completion(wc: *mut WordCompletion,
+                      line: *const c_char,
+                      word_start: c_int,
+                      word_end: c_int,
+                      suffix: *const c_char,
+                      type_suffix: *const c_char,
+                      cont_suffix: *const c_char) -> c_int {
+    unsafe {
+        cpl_add_completion(wc, line, word_start, word_end, suffix, type_suffix, cont_suffix)
+    }
+}
