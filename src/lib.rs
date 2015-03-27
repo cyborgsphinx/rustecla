@@ -1,6 +1,5 @@
 #![feature(libc)]
 #![feature(collections)]
-#![feature(std_misc)]
 //! Simple [libtecla](http://www.astro.caltech.edu/~mcs/tecla/libtecla.html) wrapper.
 
 extern crate libc;
