@@ -1,12 +1,11 @@
-#![feature(libc)]
-#![feature(collections)]
+//#![feature(collections)]
 //! Simple [libtecla](http://www.astro.caltech.edu/~mcs/tecla/libtecla.html) wrapper.
 
 extern crate libc;
 use libc::{c_char, c_int, size_t};
 
 use std::ffi::{CString, CStr};
-use std::string::as_string;
+use std::string::ToString;
 use std::str::from_utf8_unchecked;
 use std::ptr;
 
@@ -129,7 +128,7 @@ pub fn get_line(gl: *mut GetLine, prompt: &str) -> String {
         let out = CStr::from_ptr(gl_get_line(gl, c_prompt.as_ptr(), start, -1));
         res = from_utf8_unchecked(out.to_bytes());
     }
-    as_string(res).clone()
+    res.to_string()
 }
 
 ///Returns the character read, or 0 if unreadable
